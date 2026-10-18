@@ -30,9 +30,20 @@ npm test
 
 추가·삭제·체크 기능과 카운터, 비우기 버튼 상태, localStorage 저장/복원, 손상된 저장값 처리, HTML 삽입 방지를 검증합니다.
 
+## 개발 설정
+
+헤더의 `last updated` 날짜는 pre-commit 훅이 자동으로 갱신합니다. 저장소를 처음 클론했다면 한 번만 실행해 주세요.
+
+```
+git config core.hooksPath .githooks
+```
+
+이후 `index.html`이 포함된 커밋마다 날짜가 커밋 당일로 맞춰집니다.
+
 ## 구조
 
 ```
 index.html           앱 전체 (HTML + CSS + JS)
 test/app.test.mjs    테스트 스위트
+.githooks/pre-commit 날짜 자동 갱신 훅
 ```
