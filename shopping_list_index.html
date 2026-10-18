@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼핑 리스트</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --border: #e3e5e9;
+    --accent: #2f7d5d;
+    --accent-weak: #e6f2ec;
+    --danger: #c0392b;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171a;
+      --card: #1e2125;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --border: #2e3237;
+      --accent: #5bbd90;
+      --accent-weak: #22302b;
+      --danger: #e5796b;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a;
+    --card: #1e2125;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #2e3237;
+    --accent: #5bbd90;
+    --accent-weak: #22302b;
+    --danger: #e5796b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 16px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 540px; margin: 0 auto; }
+
+  header { margin-bottom: 20px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  form {
+    display: flex;
+    gap: 8px;
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 13px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: none;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-weak);
+  }
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 9px;
+    border: 1px solid transparent;
+  }
+  .add {
+    padding: 11px 18px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .add:hover { filter: brightness(1.07); }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  li:last-child { border-bottom: none; }
+
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    word-break: break-word;
+    cursor: pointer;
+  }
+  li.done .name {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+
+  .del {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+    font-size: 18px;
+    background: transparent;
+    color: var(--muted);
+  }
+  .del:hover { background: var(--accent-weak); color: var(--danger); }
+
+  .empty {
+    padding: 42px 16px;
+    margin: 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .clear {
+    padding: 6px 11px;
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .clear:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+  .clear:disabled { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>쇼핑 리스트</h1>
+    <p class="sub">장 볼 물건을 적어두고 담을 때마다 체크하세요. 내용은 이 브라우저에 자동 저장됩니다.</p>
+  </header>
+
+  <div class="card">
+    <form id="form" autocomplete="off">
+      <input type="text" id="input" placeholder="예: 우유 2개" aria-label="추가할 품목">
+      <button type="submit" class="add">추가</button>
+    </form>
+
+    <ul id="list"></ul>
+    <p class="empty" id="empty">아직 품목이 없습니다. 위에 입력해 추가하세요.</p>
+
+    <footer>
+      <span id="count"></span>
+      <button type="button" class="clear" id="clear">체크한 항목 비우기</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'shopping-list-items';
+
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+  const count = document.getElementById('count');
+  const clearBtn = document.getElementById('clear');
+
+  let items = load();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(it => it && typeof it.name === 'string')
+        .map(it => ({ id: it.id || newId(), name: it.name, done: !!it.done }));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch (e) {
+      // 시크릿 모드 등으로 저장이 막혀도 화면 동작은 그대로 유지한다
+    }
+  }
+
+  function newId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function render() {
+    list.textContent = '';
+
+    items.forEach(item => {
+      const li = document.createElement('li');
+      if (item.done) li.className = 'done';
+
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = item.done;
+      box.setAttribute('aria-label', item.name + ' 체크');
+      box.addEventListener('change', () => toggle(item.id));
+
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = item.name;
+      name.addEventListener('click', () => toggle(item.id));
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del';
+      del.textContent = '×';
+      del.title = '삭제';
+      del.setAttribute('aria-label', item.name + ' 삭제');
+      del.addEventListener('click', () => remove(item.id));
+
+      li.append(box, name, del);
+      list.appendChild(li);
+    });
+
+    const done = items.filter(it => it.done).length;
+    empty.style.display = items.length ? 'none' : 'block';
+    count.textContent = items.length
+      ? '전체 ' + items.length + '개 · 완료 ' + done + '개'
+      : '';
+    clearBtn.disabled = done === 0;
+  }
+
+  function add(name) {
+    items.push({ id: newId(), name: name, done: false });
+    save();
+    render();
+  }
+
+  function toggle(id) {
+    const item = items.find(it => it.id === id);
+    if (!item) return;
+    item.done = !item.done;
+    save();
+    render();
+  }
+
+  function remove(id) {
+    items = items.filter(it => it.id !== id);
+    save();
+    render();
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = input.value.trim();
+    if (!name) return;
+    add(name);
+    input.value = '';
+    input.focus();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    items = items.filter(it => !it.done);
+    save();
+    render();
+  });
+
+  render();
+  input.focus();
+})();
+</script>
+</body>
+</html>
