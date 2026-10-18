@@ -1,6 +1,6 @@
 # shopping-list-app
 
-의존성 없는 단일 HTML 파일로 만든 쇼핑 리스트 앱. 빌드나 서버 없이 `shopping_list_index.html`을 브라우저로 열면 바로 동작합니다.
+의존성 없는 단일 HTML 파일로 만든 쇼핑 리스트 앱. 빌드나 서버 없이 `index.html`을 브라우저로 열면 바로 동작합니다.
 
 ## 기능
 
@@ -14,14 +14,14 @@
 ## 실행
 
 ```
-shopping_list_index.html
+index.html
 ```
 
 파일을 더블클릭하거나 브라우저로 열면 됩니다.
 
 ## 테스트
 
-jsdom 위에 실제 `shopping_list_index.html`을 올려 사용자 조작을 재현하는 테스트 22개가 있습니다.
+jsdom 위에 실제 `index.html`을 올려 사용자 조작을 재현하는 테스트 22개가 있습니다.
 
 ```
 npm install
@@ -33,6 +33,6 @@ npm test
 ## 구조
 
 ```
-shopping_list_index.html           앱 전체 (HTML + CSS + JS)
+index.html           앱 전체 (HTML + CSS + JS)
 test/app.test.mjs    테스트 스위트
 ```

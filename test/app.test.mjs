@@ -7,7 +7,7 @@ import { JSDOM } from 'jsdom';
 
 const STORAGE_KEY = 'shopping-list-items';
 const HTML = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), '..', 'shopping_list_index.html'),
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'index.html'),
   'utf8'
 );
 
