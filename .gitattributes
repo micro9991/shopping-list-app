@@ -1,0 +1,2 @@
+# 훅은 Git Bash가 실행하므로 항상 LF로 유지한다
+.githooks/** text eol=lf

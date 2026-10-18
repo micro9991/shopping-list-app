@@ -1,0 +1,14 @@
+#!/bin/sh
+# index.html이 포함된 커밋에서만 헤더의 "last updated" 날짜를 오늘로 맞추고 다시 스테이징한다.
+
+git diff --cached --name-only --diff-filter=ACM | grep -qx 'index.html' || exit 0
+
+file=index.html
+today=$(date +%Y.%m.%d)
+current=$(sed -n 's|.*<p class="updated">last updated : \([0-9.]*\)</p>.*|\1|p' "$file")
+
+[ "$current" = "$today" ] && exit 0
+
+sed -i "s|\(<p class=\"updated\">last updated : \)[0-9.]*\(</p>\)|\1$today\2|" "$file"
+git add "$file"
+echo "pre-commit: last updated → $today"
