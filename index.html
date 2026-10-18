@@ -14,6 +14,7 @@
     --accent: #2f7d5d;
     --accent-weak: #e6f2ec;
     --danger: #c0392b;
+    --danger-weak: #fdecea;
     --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
   }
   @media (prefers-color-scheme: dark) {
@@ -26,6 +27,7 @@
       --accent: #5bbd90;
       --accent-weak: #22302b;
       --danger: #e5796b;
+      --danger-weak: #3a2420;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
     }
   }
@@ -38,6 +40,7 @@
     --accent: #5bbd90;
     --accent-weak: #22302b;
     --danger: #e5796b;
+    --danger-weak: #3a2420;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
   }
 
@@ -89,6 +92,8 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-weak);
   }
+  input[type="text"]:disabled { opacity: .6; }
+
   button {
     font-family: inherit;
     font-size: 15px;
@@ -103,7 +108,21 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  .add:hover { filter: brightness(1.07); }
+  .add:hover:not(:disabled) { filter: brightness(1.07); }
+  .add:disabled { opacity: .55; cursor: default; }
+
+  .status {
+    margin: 0;
+    padding: 11px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .status.error {
+    color: var(--danger);
+    background: var(--danger-weak);
+  }
 
   ul { list-style: none; margin: 0; padding: 0; }
   li {
@@ -180,61 +199,61 @@
   <header>
     <p class="updated">last updated : 2026.10.18</p>
     <h1>쇼핑 리스트</h1>
-    <p class="sub">장 볼 물건을 적어두고 담을 때마다 체크하세요. 내용은 이 브라우저에 자동 저장됩니다.</p>
+    <p class="sub">장 볼 물건을 적어두고 담을 때마다 체크하세요. 목록은 Supabase에 저장되어 다른 기기에서 열어도 같은 내용이 보입니다.</p>
   </header>
 
   <div class="card">
     <form id="form" autocomplete="off">
-      <input type="text" id="input" placeholder="예: 우유 2개" aria-label="추가할 품목">
-      <button type="submit" class="add">추가</button>
+      <input type="text" id="input" placeholder="예: 우유 2개" aria-label="추가할 품목" disabled>
+      <button type="submit" class="add" id="add" disabled>추가</button>
     </form>
 
+    <p class="status" id="status" role="status">불러오는 중…</p>
     <ul id="list"></ul>
-    <p class="empty" id="empty">아직 품목이 없습니다. 위에 입력해 추가하세요.</p>
+    <p class="empty" id="empty" style="display:none">아직 품목이 없습니다. 위에 입력해 추가하세요.</p>
 
     <footer>
       <span id="count"></span>
-      <button type="button" class="clear" id="clear">체크한 항목 비우기</button>
+      <button type="button" class="clear" id="clear" disabled>체크한 항목 비우기</button>
     </footer>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (function () {
-  const STORAGE_KEY = 'shopping-list-items';
+  // publishable 키는 브라우저에 공개되는 값이다. 실제 접근 범위는
+  // shopping_items 테이블의 RLS 정책으로 정해진다.
+  const SUPABASE_URL = 'https://zrxdynvmknxebxumcbyz.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_pYmJIwIhS8F_jVmN23PY0w_fYfT6gBl';
+  const TABLE = 'shopping_items';
+  const LEGACY_KEY = 'shopping-list-items'; // 이전 버전이 localStorage에 쓰던 키
 
   const form = document.getElementById('form');
   const input = document.getElementById('input');
+  const addBtn = document.getElementById('add');
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
   const count = document.getElementById('count');
   const clearBtn = document.getElementById('clear');
+  const status = document.getElementById('status');
 
-  let items = load();
+  let items = [];
+  let client = null;
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter(it => it && typeof it.name === 'string')
-        .map(it => ({ id: it.id || newId(), name: it.name, done: !!it.done }));
-    } catch (e) {
-      return [];
-    }
+  function setStatus(message, isError) {
+    status.textContent = message || '';
+    status.style.display = message ? 'block' : 'none';
+    status.classList.toggle('error', !!isError);
   }
 
-  function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      // 시크릿 모드 등으로 저장이 막혀도 화면 동작은 그대로 유지한다
-    }
+  function fail(what, error) {
+    setStatus(what + ': ' + (error && error.message ? error.message : '알 수 없는 오류'), true);
   }
 
-  function newId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function setBusy(busy) {
+    input.disabled = busy;
+    addBtn.disabled = busy;
   }
 
   function render() {
@@ -275,43 +294,141 @@
     clearBtn.disabled = done === 0;
   }
 
-  function add(name) {
-    items.push({ id: newId(), name: name, done: false });
-    save();
+  // 이전 버전이 localStorage에 남긴 목록이 있으면 한 번만 DB로 옮기고 키를 지운다.
+  async function importLegacyItems() {
+    let legacy;
+    try {
+      legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null');
+    } catch (e) {
+      legacy = null;
+    }
+    if (!Array.isArray(legacy)) return;
+
+    const rows = legacy
+      .filter(it => it && typeof it.name === 'string' && it.name.trim())
+      .map(it => ({ name: it.name.trim(), done: !!it.done }));
+
+    if (rows.length) {
+      const { error } = await client.from(TABLE).insert(rows);
+      if (error) {
+        fail('이전 목록을 옮기지 못했습니다', error);
+        return;
+      }
+    }
+    try {
+      localStorage.removeItem(LEGACY_KEY);
+    } catch (e) {
+      /* 저장소 접근이 막혀 있으면 무시한다 */
+    }
+  }
+
+  async function reload() {
+    setStatus('불러오는 중…');
+    const { data, error } = await client
+      .from(TABLE)
+      .select('id, name, done')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      fail('목록을 불러오지 못했습니다', error);
+      return;
+    }
+
+    items = data || [];
+    setStatus('');
+    setBusy(false);
     render();
   }
 
-  function toggle(id) {
+  async function add(name) {
+    setBusy(true);
+    const { data, error } = await client
+      .from(TABLE)
+      .insert({ name: name })
+      .select('id, name, done')
+      .single();
+    setBusy(false);
+
+    if (error) {
+      fail('추가하지 못했습니다', error);
+      return;
+    }
+
+    items.push(data);
+    setStatus('');
+    render();
+    input.focus();
+  }
+
+  async function toggle(id) {
     const item = items.find(it => it.id === id);
     if (!item) return;
-    item.done = !item.done;
-    save();
+
+    const next = !item.done;
+    const { error } = await client.from(TABLE).update({ done: next }).eq('id', id);
+
+    if (error) {
+      fail('체크 상태를 바꾸지 못했습니다', error);
+      render(); // 화면에 먼저 반영된 체크 표시를 되돌린다
+      return;
+    }
+
+    item.done = next;
+    setStatus('');
     render();
   }
 
-  function remove(id) {
+  async function remove(id) {
+    const { error } = await client.from(TABLE).delete().eq('id', id);
+
+    if (error) {
+      fail('삭제하지 못했습니다', error);
+      return;
+    }
+
     items = items.filter(it => it.id !== id);
-    save();
+    setStatus('');
+    render();
+  }
+
+  async function clearDone() {
+    const ids = items.filter(it => it.done).map(it => it.id);
+    if (!ids.length) return;
+
+    const { error } = await client.from(TABLE).delete().in('id', ids);
+
+    if (error) {
+      fail('완료 항목을 비우지 못했습니다', error);
+      return;
+    }
+
+    items = items.filter(it => !it.done);
+    setStatus('');
     render();
   }
 
   form.addEventListener('submit', e => {
     e.preventDefault();
     const name = input.value.trim();
-    if (!name) return;
-    add(name);
+    if (!name || !client) return;
     input.value = '';
+    add(name);
+  });
+
+  clearBtn.addEventListener('click', clearDone);
+
+  async function init() {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      setStatus('Supabase 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인하세요.', true);
+      return;
+    }
+    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    await importLegacyItems();
+    await reload();
     input.focus();
-  });
+  }
 
-  clearBtn.addEventListener('click', () => {
-    items = items.filter(it => !it.done);
-    save();
-    render();
-  });
-
-  render();
-  input.focus();
+  window.__appReady = init();
 })();
 </script>
 </body>
